@@ -1,7 +1,6 @@
 package com.example.sleepwell.ui.profile
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,7 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -26,6 +24,10 @@ import com.example.sleepwell.ui.theme.*
 fun SettingsScreen(onBackClick: () -> Unit) {
     val scrollState = rememberScrollState()
     var isDarkMode by remember { mutableStateOf(value = true) }
+    
+    var showPrivacyPolicy by remember { mutableStateOf(false) }
+    var showTermsOfService by remember { mutableStateOf(false) }
+    var showAboutApp by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -77,8 +79,9 @@ fun SettingsScreen(onBackClick: () -> Unit) {
                     SettingsToggleRow(
                         icon = Icons.Default.DarkMode,
                         title = "Dark Mode",
-                        checked = isDarkMode
-                    ) { isDarkMode = it }
+                        checked = isDarkMode,
+                        onCheckedChange = { isDarkMode = it }
+                    )
                     SettingsLinkRow(
                         icon = Icons.Default.Language,
                         title = "Language",
@@ -122,11 +125,13 @@ fun SettingsScreen(onBackClick: () -> Unit) {
                 Column {
                     SettingsLinkRow(
                         icon = Icons.Default.Lock,
-                        title = "Privacy Policy"
+                        title = "Privacy Policy",
+                        onClick = { showPrivacyPolicy = true }
                     )
                     SettingsLinkRow(
                         icon = Icons.Default.Description,
-                        title = "Terms of Service"
+                        title = "Terms of Service",
+                        onClick = { showTermsOfService = true }
                     )
                     SettingsLinkRow(
                         icon = Icons.Default.Delete,
@@ -148,7 +153,8 @@ fun SettingsScreen(onBackClick: () -> Unit) {
                 Column {
                     SettingsLinkRow(
                         icon = Icons.Default.Info,
-                        title = "About SleepWell AI"
+                        title = "About SleepWell AI",
+                        onClick = { showAboutApp = true }
                     )
                     SettingsLinkRow(
                         icon = Icons.Default.Star,
@@ -181,6 +187,30 @@ fun SettingsScreen(onBackClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(32.dp))
         }
+
+        if (showPrivacyPolicy) {
+            InfoDialog(
+                title = "Privacy Policy",
+                text = "At SleepWell AI, your privacy is our priority. We only collect sleep data that you manually log or sync from your device to provide personalized AI insights. We do not sell your personal data to third parties. Your data is encrypted and stored securely to help you achieve better sleep health.",
+                onDismiss = { showPrivacyPolicy = false }
+            )
+        }
+
+        if (showTermsOfService) {
+            InfoDialog(
+                title = "Terms of Service",
+                text = "By using SleepWell AI, you agree to provide accurate sleep information for the best results. The AI predictions and tips provided are for educational purposes and should not replace professional medical advice. You are responsible for maintaining the confidentiality of your account.",
+                onDismiss = { showTermsOfService = false }
+            )
+        }
+
+        if (showAboutApp) {
+            InfoDialog(
+                title = "About SleepWell AI",
+                text = "SleepWell AI is an advanced sleep companion designed to help you understand and improve your sleep patterns. Leveraging artificial intelligence, we analyze your habits and environment to provide actionable recommendations for a more rested life. Built with love by SleepWell Technologies.",
+                onDismiss = { showAboutApp = false }
+            )
+        }
     }
 }
 
@@ -193,31 +223,6 @@ fun SettingsSectionHeader(title: String) {
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
     )
-}
-
-@Composable
-fun SettingsLinkRow(
-    icon: ImageVector,
-    title: String,
-    value: String? = null,
-    titleColor: Color = TextWhite,
-    onClick: () -> Unit = {}
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = null, tint = ButtonGradientStart, modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(text = title, color = titleColor, fontSize = 16.sp, modifier = Modifier.weight(1f))
-        if (value != null) {
-            Text(text = value, color = TextGray, fontSize = 14.sp, modifier = Modifier.padding(end = 8.dp))
-        }
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextGray)
-    }
 }
 
 @Preview(showBackground = true)

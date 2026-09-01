@@ -34,6 +34,7 @@ fun ProfileScreen(
 ) {
     val scrollState = rememberScrollState()
     var isDarkMode by remember { mutableStateOf(true) }
+    var showPrivacyPolicy by remember { mutableStateOf(false) }
 
     Scaffold(
         bottomBar = {
@@ -188,7 +189,7 @@ fun ProfileScreen(
                     SettingsLinkRow(
                         icon = Icons.Default.Lock,
                         title = "Privacy",
-                        onClick = { }
+                        onClick = { showPrivacyPolicy = true }
                     )
                     SettingsLinkRow(
                         icon = Icons.Default.Settings,
@@ -219,6 +220,14 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+
+        if (showPrivacyPolicy) {
+            InfoDialog(
+                title = "Privacy Policy",
+                text = "At SleepWell AI, your privacy is our priority. We only collect sleep data that you manually log or sync from your device to provide personalized AI insights. We do not sell your personal data to third parties. Your data is encrypted and stored securely to help you achieve better sleep health.",
+                onDismiss = { showPrivacyPolicy = false }
+            )
+        }
     }
 }
 
@@ -227,28 +236,6 @@ fun ProfileStatItem(value: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = value, color = TextWhite, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Text(text = label, color = TextGray, fontSize = 12.sp)
-    }
-}
-
-@Composable
-fun ProfileSectionCard(title: String, content: @Composable () -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = title,
-            color = TextWhite,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
-        )
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            color = DarkPurple.copy(alpha = 0.6f)
-        ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                content()
-            }
-        }
     }
 }
 
@@ -288,46 +275,6 @@ fun SleepGoalItem(
             Text(text = value, color = TextWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Text(text = label, color = TextGray, fontSize = 9.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
-    }
-}
-
-@Composable
-fun SettingsToggleRow(icon: ImageVector, title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = null, tint = ButtonGradientStart, modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(text = title, color = TextWhite, fontSize = 16.sp, modifier = Modifier.weight(1f))
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = TextWhite,
-                checkedTrackColor = ButtonGradientStart,
-                uncheckedThumbColor = TextGray,
-                uncheckedTrackColor = DeepBlue
-            )
-        )
-    }
-}
-
-@Composable
-fun SettingsLinkRow(icon: ImageVector, title: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = null, tint = ButtonGradientStart, modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(text = title, color = TextWhite, fontSize = 16.sp, modifier = Modifier.weight(1f))
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextGray)
     }
 }
 

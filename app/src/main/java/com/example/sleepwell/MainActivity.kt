@@ -25,9 +25,11 @@ import com.example.sleepwell.ui.profile.ProfileScreen
 import com.example.sleepwell.ui.profile.SettingsScreen
 import com.example.sleepwell.ui.theme.SleepWellTheme
 import com.example.sleepwell.ui.tips.RecommendationsScreen
+import com.example.sleepwell.ui.weather.WeatherScreen
+import com.example.sleepwell.ui.alarm.AlarmScreen
 
 enum class Screen {
-    Onboarding, Login, Register, Home, SleepLog, AIAnalysis, Analytics, Recommendations, WeeklyReport, Notifications, Profile, Settings
+    Onboarding, Login, Register, Home, SleepLog, AIAnalysis, Analytics, Recommendations, WeeklyReport, Notifications, Profile, Settings, Weather, Alarm
 }
 
 class MainActivity : ComponentActivity() {
@@ -61,7 +63,9 @@ class MainActivity : ComponentActivity() {
                             onAnalyticsClick = { currentScreen = Screen.Analytics },
                             onRecommendationsClick = { currentScreen = Screen.Recommendations },
                             onNotificationsClick = { currentScreen = Screen.Notifications },
-                            onProfileClick = { currentScreen = Screen.Profile }
+                            onProfileClick = { currentScreen = Screen.Profile },
+                            onWeatherClick = { currentScreen = Screen.Weather },
+                            onAlarmClick = { currentScreen = Screen.Alarm }
                         )
                     }
                     Screen.SleepLog -> {
@@ -116,6 +120,16 @@ class MainActivity : ComponentActivity() {
                     Screen.Settings -> {
                         SettingsScreen(
                             onBackClick = { currentScreen = Screen.Profile }
+                        )
+                    }
+                    Screen.Weather -> {
+                        WeatherScreen(
+                            onBackClick = { currentScreen = Screen.Home }
+                        )
+                    }
+                    Screen.Alarm -> {
+                        AlarmScreen(
+                            onBackClick = { currentScreen = Screen.Home }
                         )
                     }
                 }

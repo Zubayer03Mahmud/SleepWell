@@ -1,0 +1,10 @@
+- [x] Add Alarm and Notification permissions to `AndroidManifest.xml`
+- [x] Register `AlarmReceiver` in `AndroidManifest.xml`
+- [x] Create Alarm data model (`AlarmData.kt`)
+- [x] Create `AlarmReceiver.kt` to handle alarm triggers
+- [x] Create `AlarmManagerHelper.kt` for scheduling logic
+- [x] Create `AlarmViewModel.kt` for UI state
+- [x] Create `AlarmScreen.kt` UI
+- [x] Integrate Alarm navigation in `MainActivity.kt`
+- [x] Add Alarm card in `HomeDashboardScreen.kt`
+- [x] Verification and build

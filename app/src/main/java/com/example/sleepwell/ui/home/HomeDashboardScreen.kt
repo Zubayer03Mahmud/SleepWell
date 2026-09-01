@@ -32,7 +32,9 @@ fun HomeDashboardScreen(
     onAnalyticsClick: () -> Unit,
     onRecommendationsClick: () -> Unit,
     onNotificationsClick: () -> Unit,
-    onProfileClick: () -> Unit
+    onProfileClick: () -> Unit,
+    onWeatherClick: () -> Unit,
+    onAlarmClick: () -> Unit
 ) {
     val scrollState = rememberScrollState()
 
@@ -212,6 +214,66 @@ fun HomeDashboardScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Weather Card
+            Surface(
+                onClick = onWeatherClick,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                color = DarkPurple
+            ) {
+                Row(
+                    modifier = Modifier.padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Cloud,
+                        contentDescription = null,
+                        tint = ButtonGradientStart,
+                        modifier = Modifier.size(40.dp)
+                    )
+                    Spacer(modifier = Modifier.width(20.dp))
+                    Column {
+                        Text(text = "WEATHER", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "Check Local Conditions", color = TextWhite, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "Optimize your sleep environment", color = TextGray, fontSize = 12.sp)
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextGray)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Alarm Card
+            Surface(
+                onClick = onAlarmClick,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                color = DarkPurple
+            ) {
+                Row(
+                    modifier = Modifier.padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Alarm,
+                        contentDescription = null,
+                        tint = Color(0xFFE91E63),
+                        modifier = Modifier.size(40.dp)
+                    )
+                    Spacer(modifier = Modifier.width(20.dp))
+                    Column {
+                        Text(text = "ALARM", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "Set Wake-up Time", color = TextWhite, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "Wake up refreshed", color = TextGray, fontSize = 12.sp)
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextGray)
+                }
+            }
+
             Spacer(modifier = Modifier.height(32.dp))
 
             // Quick Stats
@@ -219,7 +281,7 @@ fun HomeDashboardScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 StatItem(icon = Icons.Default.NightsStay, value = "7.5h", label = "Duration")
                 StatItem(icon = Icons.Default.SentimentNeutral, value = "3/10", label = "Stress")
@@ -306,12 +368,12 @@ fun StatItem(icon: ImageVector, value: String, label: String) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
+            .width(64.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(DarkPurple)
-            .padding(8.dp)
-            .width(56.dp)
+            .padding(vertical = 12.dp, horizontal = 4.dp)
     ) {
-        Icon(icon, contentDescription = null, tint = ButtonGradientEnd, modifier = Modifier.size(20.dp))
+        Icon(icon, contentDescription = null, tint = ButtonGradientEnd, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.height(8.dp))
         Text(text = value, color = TextWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Text(text = label, color = TextGray, fontSize = 10.sp)
@@ -327,7 +389,9 @@ fun HomeDashboardPreview() {
             onAnalyticsClick = {},
             onRecommendationsClick = {},
             onNotificationsClick = {},
-            onProfileClick = {}
+            onProfileClick = {},
+            onWeatherClick = {},
+            onAlarmClick = {}
         )
     }
 }
