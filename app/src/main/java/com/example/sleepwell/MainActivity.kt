@@ -4,57 +4,71 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.sp
-import com.example.sleepwell.ui.analytics.AnalyticsScreen
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.sleepwell.data.repository.AuthRepository
+import com.example.sleepwell.ui.alarm.AlarmScreen
 import com.example.sleepwell.ui.analytics.AnalyticsScreen
 import com.example.sleepwell.ui.analytics.WeeklyReportScreen
+import com.example.sleepwell.ui.auth.AuthViewModel
 import com.example.sleepwell.ui.auth.LoginScreen
 import com.example.sleepwell.ui.auth.RegisterScreen
+import com.example.sleepwell.ui.chat.AIChatScreen
+import com.example.sleepwell.ui.chat.ChatViewModel
 import com.example.sleepwell.ui.home.HomeDashboardScreen
 import com.example.sleepwell.ui.log.AIAnalysisScreen
 import com.example.sleepwell.ui.log.SleepLogScreen
+import com.example.sleepwell.ui.log.SleepLogViewModel
 import com.example.sleepwell.ui.notifications.NotificationScreen
 import com.example.sleepwell.ui.onboarding.OnboardingScreen
 import com.example.sleepwell.ui.profile.ProfileScreen
+import com.example.sleepwell.ui.profile.ProfileViewModel
 import com.example.sleepwell.ui.profile.SettingsScreen
 import com.example.sleepwell.ui.theme.SleepWellTheme
 import com.example.sleepwell.ui.tips.RecommendationsScreen
 import com.example.sleepwell.ui.weather.WeatherScreen
-import com.example.sleepwell.ui.alarm.AlarmScreen
 
 enum class Screen {
-    Onboarding, Login, Register, Home, SleepLog, AIAnalysis, Analytics, Recommendations, WeeklyReport, Notifications, Profile, Settings, Weather, Alarm
+    Onboarding, Login, Register, Home, SleepLog, AIAnalysis, Analytics, Recommendations, WeeklyReport, Notifications, Profile, Settings, Weather, Alarm, AIChat
 }
 
 class MainActivity : ComponentActivity() {
+    private val authRepository = AuthRepository()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             SleepWellTheme {
-                var currentScreen by remember { mutableStateOf(Screen.Onboarding) }
+                val startScreen = remember {
+                    if (authRepository.isUserLoggedIn()) Screen.Home else Screen.Onboarding
+                }
+                var currentScreen by remember { mutableStateOf(startScreen) }
+
+                val authViewModel: AuthViewModel = viewModel()
+                val sleepLogViewModel: SleepLogViewModel = viewModel()
+                val profileViewModel: ProfileViewModel = viewModel()
+                val chatViewModel: ChatViewModel = viewModel()
 
                 when (currentScreen) {
                     Screen.Onboarding -> {
-                        OnboardingScreen(onFinished = { currentScreen = Screen.Login })
+                        OnboardingScreen(onFinished = {
+                            currentScreen = if (authRepository.isUserLoggedIn()) Screen.Home else Screen.Login
+                        })
                     }
                     Screen.Login -> {
                         LoginScreen(
                             onLoginClick = { currentScreen = Screen.Home },
                             onRegisterClick = { currentScreen = Screen.Register },
-                            onForgotPasswordClick = { /* Navigate to Forgot Password */ }
+                            onForgotPasswordClick = { },
+                            authViewModel = authViewModel
                         )
                     }
                     Screen.Register -> {
                         RegisterScreen(
                             onRegisterClick = { currentScreen = Screen.Home },
-                            onBackClick = { currentScreen = Screen.Login }
+                            onBackClick = { currentScreen = Screen.Login },
+                            authViewModel = authViewModel
                         )
                     }
                     Screen.Home -> {
@@ -65,19 +79,22 @@ class MainActivity : ComponentActivity() {
                             onNotificationsClick = { currentScreen = Screen.Notifications },
                             onProfileClick = { currentScreen = Screen.Profile },
                             onWeatherClick = { currentScreen = Screen.Weather },
-                            onAlarmClick = { currentScreen = Screen.Alarm }
+                            onAlarmClick = { currentScreen = Screen.Alarm },
+                            onChatClick = { currentScreen = Screen.AIChat }
                         )
                     }
                     Screen.SleepLog -> {
                         SleepLogScreen(
                             onBackClick = { currentScreen = Screen.Home },
-                            onPredictClick = { currentScreen = Screen.AIAnalysis }
+                            onPredictClick = { currentScreen = Screen.AIAnalysis },
+                            sleepLogViewModel = sleepLogViewModel
                         )
                     }
                     Screen.AIAnalysis -> {
                         AIAnalysisScreen(
                             onBackClick = { currentScreen = Screen.SleepLog },
-                            onSaveClick = { currentScreen = Screen.Home }
+                            onSaveClick = { currentScreen = Screen.Home },
+                            sleepLogViewModel = sleepLogViewModel
                         )
                     }
                     Screen.Analytics -> {
@@ -94,7 +111,8 @@ class MainActivity : ComponentActivity() {
                             onHomeClick = { currentScreen = Screen.Home },
                             onLogClick = { currentScreen = Screen.SleepLog },
                             onAnalyticsClick = { currentScreen = Screen.Analytics },
-                            onProfileClick = { currentScreen = Screen.Profile }
+                            onProfileClick = { currentScreen = Screen.Profile },
+                            onChatClick = { currentScreen = Screen.AIChat }
                         )
                     }
                     Screen.WeeklyReport -> {
@@ -114,7 +132,8 @@ class MainActivity : ComponentActivity() {
                             onAnalyticsClick = { currentScreen = Screen.Analytics },
                             onNotificationsClick = { currentScreen = Screen.Notifications },
                             onLogoutClick = { currentScreen = Screen.Login },
-                            onSettingsClick = { currentScreen = Screen.Settings }
+                            onSettingsClick = { currentScreen = Screen.Settings },
+                            profileViewModel = profileViewModel
                         )
                     }
                     Screen.Settings -> {
@@ -132,14 +151,14 @@ class MainActivity : ComponentActivity() {
                             onBackClick = { currentScreen = Screen.Home }
                         )
                     }
+                    Screen.AIChat -> {
+                        AIChatScreen(
+                            onBackClick = { currentScreen = Screen.Home },
+                            chatViewModel = chatViewModel
+                        )
+                    }
                 }
             }
         }
     }
 }
-
-
-
-
-// Remove LoginPlaceholder
-

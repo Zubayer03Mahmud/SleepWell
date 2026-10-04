@@ -31,13 +31,15 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sleepwell.ui.onboarding.StarBackground
 import com.example.sleepwell.ui.theme.*
 
 @Composable
 fun RegisterScreen(
     onRegisterClick: () -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    authViewModel: AuthViewModel = viewModel()
 ) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -48,6 +50,8 @@ fun RegisterScreen(
     
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
+
+    val uiState by authViewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
     Box(
@@ -85,7 +89,23 @@ fun RegisterScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Error Banner
+            uiState.errorMessage?.let { error ->
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color.Red.copy(alpha = 0.2f)
+                ) {
+                    Text(
+                        text = error,
+                        color = Color.Red,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
 
             // Profile Photo Section
             Column(
@@ -121,7 +141,10 @@ fun RegisterScreen(
             CustomTextField(
                 label = "Full Name",
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = {
+                    name = it
+                    authViewModel.clearMessages()
+                },
                 placeholder = "Alex Johnson"
             )
 
@@ -131,7 +154,10 @@ fun RegisterScreen(
             CustomTextField(
                 label = "Email Address",
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = {
+                    email = it
+                    authViewModel.clearMessages()
+                },
                 placeholder = "alex@example.com",
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
             )
@@ -142,8 +168,11 @@ fun RegisterScreen(
             CustomTextField(
                 label = "Password",
                 value = password,
-                onValueChange = { password = it },
-                placeholder = "Min. 8 characters",
+                onValueChange = {
+                    password = it
+                    authViewModel.clearMessages()
+                },
+                placeholder = "Min. 6 characters",
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -163,7 +192,10 @@ fun RegisterScreen(
             CustomTextField(
                 label = "Confirm Password",
                 value = confirmPassword,
-                onValueChange = { confirmPassword = it },
+                onValueChange = {
+                    confirmPassword = it
+                    authViewModel.clearMessages()
+                },
                 placeholder = "Repeat password",
                 visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
@@ -206,7 +238,18 @@ fun RegisterScreen(
 
             // Create Account Button
             Button(
-                onClick = onRegisterClick,
+                onClick = {
+                    authViewModel.register(
+                        fullName = name,
+                        email = email,
+                        password = password,
+                        confirmPassword = confirmPassword,
+                        ageStr = age,
+                        gender = gender,
+                        onSuccess = onRegisterClick
+                    )
+                },
+                enabled = !uiState.isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -224,12 +267,16 @@ fun RegisterScreen(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "Create Account",
-                        color = TextWhite,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = TextWhite)
+                    } else {
+                        Text(
+                            text = "Create Account",
+                            color = TextWhite,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 

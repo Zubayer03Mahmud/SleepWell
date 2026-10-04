@@ -15,7 +15,7 @@ import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,15 +25,30 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sleepwell.ui.theme.*
 
 @Composable
-fun AIAnalysisScreen(onBackClick: () -> Unit, onSaveClick: () -> Unit) {
+fun AIAnalysisScreen(
+    onBackClick: () -> Unit,
+    onSaveClick: () -> Unit,
+    sleepLogViewModel: SleepLogViewModel = viewModel()
+) {
+    val uiState by sleepLogViewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
+
+    val session = uiState.currentSession ?: remember {
+        sleepLogViewModel.generatePrediction()
+    }
+
+    val score = session.sleepScore
+    val category = session.qualityCategory
+    val confidence = session.aiConfidence
+    val strengths = if (session.strengths.isNotEmpty()) session.strengths else listOf("Good bedtime consistency", "Low stress levels today", "Adequate physical activity")
+    val improvements = if (session.improvements.isNotEmpty()) session.improvements else listOf("High screen time before bed", "Evening caffeine intake detected")
 
     Box(
         modifier = Modifier
@@ -58,6 +73,11 @@ fun AIAnalysisScreen(onBackClick: () -> Unit, onSaveClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            // Error Message
+            uiState.errorMessage?.let { error ->
+                Text(text = error, color = Color.Red, fontSize = 14.sp, modifier = Modifier.padding(bottom = 16.dp))
+            }
+
             // Large Score Ring
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -72,20 +92,20 @@ fun AIAnalysisScreen(onBackClick: () -> Unit, onSaveClick: () -> Unit) {
                         drawArc(
                             color = Color(0xFF4CAF50),
                             startAngle = -90f,
-                            sweepAngle = 295f,
+                            sweepAngle = (score / 100f) * 360f,
                             useCenter = false,
                             style = Stroke(width = 12.dp.toPx(), cap = StrokeCap.Round)
                         )
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = "82", color = TextWhite, fontSize = 48.sp, fontWeight = FontWeight.Bold)
+                        Text(text = score.toString(), color = TextWhite, fontSize = 48.sp, fontWeight = FontWeight.Bold)
                         Text(text = "/ 100", color = TextGray, fontSize = 16.sp)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Text(text = "Excellent Sleep", color = TextWhite, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text(text = category, color = TextWhite, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 Text(text = "Based on tonight's data", color = TextGray, fontSize = 14.sp)
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -101,7 +121,7 @@ fun AIAnalysisScreen(onBackClick: () -> Unit, onSaveClick: () -> Unit) {
                     ) {
                         Icon(Icons.Default.Info, contentDescription = null, tint = ButtonGradientStart, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "AI Confidence: 94%", color = ButtonGradientStart, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "AI Confidence: $confidence%", color = ButtonGradientStart, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -121,16 +141,17 @@ fun AIAnalysisScreen(onBackClick: () -> Unit, onSaveClick: () -> Unit) {
                     
                     Text(text = "STRENGTHS", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(12.dp))
-                    StrengthItem(text = "Good bedtime consistency")
-                    StrengthItem(text = "Low stress levels today")
-                    StrengthItem(text = "Adequate physical activity")
+                    strengths.forEach { strength ->
+                        StrengthItem(text = strength)
+                    }
 
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Text(text = "NEEDS IMPROVEMENT", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(12.dp))
-                    ImprovementItem(text = "High screen time before bed")
-                    ImprovementItem(text = "Evening caffeine intake detected")
+                    improvements.forEach { improvement ->
+                        ImprovementItem(text = improvement)
+                    }
                 }
             }
 
@@ -173,7 +194,10 @@ fun AIAnalysisScreen(onBackClick: () -> Unit, onSaveClick: () -> Unit) {
 
             // Save Result Button
             Button(
-                onClick = onSaveClick,
+                onClick = {
+                    sleepLogViewModel.saveSession(onSuccess = onSaveClick)
+                },
+                enabled = !uiState.isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -191,12 +215,16 @@ fun AIAnalysisScreen(onBackClick: () -> Unit, onSaveClick: () -> Unit) {
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "Save Result",
-                        color = TextWhite,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = TextWhite)
+                    } else {
+                        Text(
+                            text = "Save Result",
+                            color = TextWhite,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
             

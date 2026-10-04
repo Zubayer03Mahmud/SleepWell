@@ -28,20 +28,27 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sleepwell.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
-fun SleepLogScreen(onBackClick: () -> Unit, onPredictClick: () -> Unit) {
-    var sleepDuration by remember { mutableFloatStateOf(7f) }
-    var bedtime by remember { mutableStateOf("10:30 PM") }
-    var wakeTime by remember { mutableStateOf("06:00 AM") }
-    var stressLevel by remember { mutableFloatStateOf(4f) }
-    var screenTime by remember { mutableStateOf("1-2 hours") }
-    var activity by remember { mutableStateOf("Moderate (30 min)") }
-    var caffeine by remember { mutableStateOf("1 cup (morning)") }
-    var notes by remember { mutableStateOf("") }
-    
+fun SleepLogScreen(
+    onBackClick: () -> Unit,
+    onPredictClick: () -> Unit,
+    sleepLogViewModel: SleepLogViewModel = viewModel()
+) {
+    val uiState by sleepLogViewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
+
+    var showBedtimePicker by remember { mutableStateOf(false) }
+    var showWakeTimePicker by remember { mutableStateOf(false) }
+
+    val currentDate = remember {
+        SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date())
+    }
 
     Box(
         modifier = Modifier
@@ -63,7 +70,7 @@ fun SleepLogScreen(onBackClick: () -> Unit, onPredictClick: () -> Unit) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(text = "Sleep Log", color = TextWhite, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    Text(text = "Tuesday, July 22", color = TextGray, fontSize = 14.sp)
+                    Text(text = currentDate, color = TextGray, fontSize = 14.sp)
                 }
             }
 
@@ -87,17 +94,22 @@ fun SleepLogScreen(onBackClick: () -> Unit, onPredictClick: () -> Unit) {
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(sleepDuration / 12f)
+                            .fillMaxWidth(uiState.sleepDuration / 12f)
                             .fillMaxHeight()
                             .background(Brush.horizontalGradient(listOf(ButtonGradientStart, ButtonGradientEnd)))
                     )
                 }
                 Spacer(modifier = Modifier.width(16.dp))
-                Text(text = "${sleepDuration.toInt()}h", color = ButtonGradientStart, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(
+                    text = String.format(Locale.getDefault(), "%.1fh", uiState.sleepDuration),
+                    color = ButtonGradientStart,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
             }
             Slider(
-                value = sleepDuration,
-                onValueChange = { sleepDuration = it },
+                value = uiState.sleepDuration,
+                onValueChange = { sleepLogViewModel.updateDuration(it) },
                 valueRange = 0f..12f,
                 colors = SliderDefaults.colors(
                     thumbColor = TextWhite,
@@ -112,18 +124,18 @@ fun SleepLogScreen(onBackClick: () -> Unit, onPredictClick: () -> Unit) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 TimePickerCard(
                     label = "Bedtime",
-                    time = bedtime,
+                    time = uiState.bedtime,
                     icon = Icons.Default.AccessTime,
                     modifier = Modifier.weight(1f),
-                    onClick = { /* TODO */ }
+                    onClick = { showBedtimePicker = true }
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 TimePickerCard(
                     label = "Wake Up",
-                    time = wakeTime,
+                    time = uiState.wakeTime,
                     icon = Icons.Default.AccessTime,
                     modifier = Modifier.weight(1f),
-                    onClick = { /* TODO */ }
+                    onClick = { showWakeTimePicker = true }
                 )
             }
 
@@ -132,8 +144,9 @@ fun SleepLogScreen(onBackClick: () -> Unit, onPredictClick: () -> Unit) {
             // Screen Time
             LogDropdownField(
                 label = "Screen Time Before Sleep",
-                value = screenTime,
-                icon = Icons.Default.Monitor
+                value = uiState.screenTime,
+                icon = Icons.Default.Monitor,
+                onValueSelected = { sleepLogViewModel.updateScreenTime(it) }
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -141,8 +154,9 @@ fun SleepLogScreen(onBackClick: () -> Unit, onPredictClick: () -> Unit) {
             // Physical Activity
             LogDropdownField(
                 label = "Physical Activity",
-                value = activity,
-                icon = Icons.AutoMirrored.Filled.DirectionsRun
+                value = uiState.activity,
+                icon = Icons.AutoMirrored.Filled.DirectionsRun,
+                onValueSelected = { sleepLogViewModel.updateActivity(it) }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -157,11 +171,11 @@ fun SleepLogScreen(onBackClick: () -> Unit, onPredictClick: () -> Unit) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(text = "Stress Level", color = TextGray, fontSize = 14.sp)
                 }
-                Text(text = stressLevel.toInt().toString(), color = Color(0xFF9575CD), fontWeight = FontWeight.Bold)
+                Text(text = uiState.stressLevel.toInt().toString(), color = Color(0xFF9575CD), fontWeight = FontWeight.Bold)
             }
             Slider(
-                value = stressLevel,
-                onValueChange = { stressLevel = it },
+                value = uiState.stressLevel,
+                onValueChange = { sleepLogViewModel.updateStressLevel(it) },
                 valueRange = 1f..10f,
                 colors = SliderDefaults.colors(
                     thumbColor = TextWhite,
@@ -175,8 +189,9 @@ fun SleepLogScreen(onBackClick: () -> Unit, onPredictClick: () -> Unit) {
             // Caffeine Intake
             LogDropdownField(
                 label = "Caffeine Intake",
-                value = caffeine,
-                icon = Icons.Default.Coffee
+                value = uiState.caffeine,
+                icon = Icons.Default.Coffee,
+                onValueSelected = { sleepLogViewModel.updateCaffeine(it) }
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -190,8 +205,8 @@ fun SleepLogScreen(onBackClick: () -> Unit, onPredictClick: () -> Unit) {
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
-                    value = notes,
-                    onValueChange = { notes = it },
+                    value = uiState.notes,
+                    onValueChange = { sleepLogViewModel.updateNotes(it) },
                     placeholder = { Text(text = "How are you feeling tonight?", color = TextGray, fontSize = 14.sp) },
                     modifier = Modifier.fillMaxWidth().height(100.dp),
                     shape = RoundedCornerShape(12.dp),
@@ -210,7 +225,10 @@ fun SleepLogScreen(onBackClick: () -> Unit, onPredictClick: () -> Unit) {
 
             // Predict Button
             Button(
-                onClick = onPredictClick,
+                onClick = {
+                    sleepLogViewModel.generatePrediction()
+                    onPredictClick()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -273,7 +291,9 @@ fun TimePickerCard(label: String, time: String, icon: ImageVector, modifier: Mod
 }
 
 @Composable
-fun LogDropdownField(label: String, value: String, icon: ImageVector) {
+fun LogDropdownField(label: String, value: String, icon: ImageVector, onValueSelected: (String) -> Unit = {}) {
+    var expanded by remember { mutableStateOf(false) }
+
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, contentDescription = null, tint = TextGray, modifier = Modifier.size(14.dp))
@@ -281,19 +301,43 @@ fun LogDropdownField(label: String, value: String, icon: ImageVector) {
             Text(text = label, color = TextGray, fontSize = 12.sp)
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp)),
-            color = DarkPurple
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { expanded = true },
+                color = DarkPurple
             ) {
-                Text(text = value, color = TextWhite)
-                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = TextGray)
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = value, color = TextWhite)
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = TextGray)
+                }
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(DarkPurple)
+            ) {
+                val options = when (label) {
+                    "Screen Time Before Sleep" -> listOf("< 30 mins", "1-2 hours", "2-3 hours", "3+ hours")
+                    "Physical Activity" -> listOf("None", "Light (15 min)", "Moderate (30 min)", "Intense (60+ min)")
+                    else -> listOf("None", "1 cup (morning)", "2 cups (afternoon)", "Evening coffee")
+                }
+                options.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(text = option, color = TextWhite) },
+                        onClick = {
+                            onValueSelected(option)
+                            expanded = false
+                        }
+                    )
+                }
             }
         }
     }

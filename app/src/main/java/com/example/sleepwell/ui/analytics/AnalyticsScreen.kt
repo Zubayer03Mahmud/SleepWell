@@ -1,5 +1,6 @@
 package com.example.sleepwell.ui.analytics
 
+import android.graphics.Paint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,26 +15,23 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sleepwell.ui.theme.*
-
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.toArgb
-import android.graphics.Paint
-import android.graphics.Typeface
-import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun AnalyticsScreen(
@@ -41,10 +39,16 @@ fun AnalyticsScreen(
     onLogClick: () -> Unit,
     onRecommendationsClick: () -> Unit,
     onWeeklyReportClick: () -> Unit,
-    onProfileClick: () -> Unit
+    onProfileClick: () -> Unit,
+    analyticsViewModel: AnalyticsViewModel = viewModel()
 ) {
+    val uiState by analyticsViewModel.uiState.collectAsState()
     var selectedPeriod by remember { mutableStateOf("This Week") }
     val scrollState = rememberScrollState()
+
+    LaunchedEffect(Unit) {
+        analyticsViewModel.loadAnalytics()
+    }
 
     Scaffold(
         bottomBar = {
@@ -158,7 +162,7 @@ fun AnalyticsScreen(
                 shape = RoundedCornerShape(24.dp),
                 color = DarkPurple
             ) {
-                SleepScoreAreaChart()
+                SleepScoreAreaChart(points = uiState.chartPoints)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -235,21 +239,21 @@ fun AnalyticsScreen(
                 ) {
                     AnalyticsStatCard(
                         icon = Icons.Default.NightsStay,
-                        value = "7.3h",
+                        value = uiState.avgSleepDuration,
                         label = "Avg Sleep",
                         modifier = Modifier.weight(1f),
                         iconTint = Color(0xFFFFA000)
                     )
                     AnalyticsStatCard(
                         icon = Icons.Default.Star,
-                        value = "Sat",
+                        value = uiState.bestDay,
                         label = "Best Day",
                         modifier = Modifier.weight(1f),
                         iconTint = Color(0xFFFFD700)
                     )
                     AnalyticsStatCard(
                         icon = Icons.Default.MoodBad,
-                        value = "Fri",
+                        value = uiState.worstDay,
                         label = "Worst Day",
                         modifier = Modifier.weight(1f),
                         iconTint = Color(0xFFEF5350)
@@ -262,21 +266,21 @@ fun AnalyticsScreen(
                 ) {
                     AnalyticsStatCard(
                         icon = Icons.Default.Psychology,
-                        value = "4.3",
+                        value = uiState.avgStressLevel,
                         label = "Avg Stress",
                         modifier = Modifier.weight(1f),
                         iconTint = Color(0xFF9575CD)
                     )
                     AnalyticsStatCard(
                         icon = Icons.Default.Assessment,
-                        value = "75",
+                        value = uiState.avgSleepScore,
                         label = "Avg Score",
                         modifier = Modifier.weight(1f),
                         iconTint = ButtonGradientStart
                     )
                     AnalyticsStatCard(
                         icon = Icons.Default.Whatshot,
-                        value = "7d",
+                        value = uiState.streakDays,
                         label = "Streak",
                         modifier = Modifier.weight(1f),
                         iconTint = Color(0xFFFF7043)
@@ -309,15 +313,14 @@ fun TimePeriodButton(text: String, isSelected: Boolean, onClick: () -> Unit, mod
 }
 
 @Composable
-fun SleepScoreAreaChart() {
+fun SleepScoreAreaChart(points: List<Float> = listOf(0.5f, 0.7f, 0.6f, 0.8f, 0.5f, 0.9f, 0.75f)) {
     val textGrayArgb = TextGray.toArgb()
     val days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
     
     Canvas(modifier = Modifier.fillMaxSize().padding(start = 40.dp, end = 20.dp, top = 20.dp, bottom = 40.dp)) {
-        val points = listOf(0.5f, 0.7f, 0.6f, 0.8f, 0.5f, 0.9f, 0.75f)
         val width = size.width
         val height = size.height
-        val stepX = width / (points.size - 1)
+        val stepX = width / (points.size - 1).coerceAtLeast(1)
 
         // Draw Grid and Y-Axis Labels
         val paint = Paint().apply {
@@ -354,8 +357,9 @@ fun SleepScoreAreaChart() {
             }
             
             // X-Axis labels
+            val dayLabel = days.getOrElse(index % days.size) { "" }
             drawContext.canvas.nativeCanvas.drawText(
-                days[index],
+                dayLabel,
                 x,
                 height + 24.dp.toPx(),
                 Paint().apply {
@@ -415,7 +419,6 @@ fun DurationBarChart() {
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx())
             )
             
-            // Labels (simplified to M, T, W...)
             drawContext.canvas.nativeCanvas.drawText(
                 days[index].take(1),
                 x + barWidth / 2,

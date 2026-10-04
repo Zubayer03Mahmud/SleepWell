@@ -10,7 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sleepwell.ui.theme.*
 
 @Composable
@@ -34,9 +35,25 @@ fun HomeDashboardScreen(
     onNotificationsClick: () -> Unit,
     onProfileClick: () -> Unit,
     onWeatherClick: () -> Unit,
-    onAlarmClick: () -> Unit
+    onAlarmClick: () -> Unit,
+    onChatClick: () -> Unit = {},
+    homeViewModel: HomeViewModel = viewModel()
 ) {
+    val uiState by homeViewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
+
+    LaunchedEffect(Unit) {
+        homeViewModel.loadData()
+    }
+
+    val userName = uiState.userProfile?.fullName?.ifBlank { "User" } ?: "Alex Johnson"
+    val latest = uiState.latestSession
+    val score = latest?.sleepScore ?: uiState.averageScore
+    val durationText = if (latest != null) String.format("%.1fh", latest.sleepDuration) else "7.5h"
+    val stressText = if (latest != null) "${latest.stressLevel.toInt()}/10" else "3/10"
+    val screenText = latest?.screenTime ?: "1.2h"
+    val caffeineText = latest?.caffeine ?: "1 cup"
+    val activityText = latest?.activity ?: "8,420"
 
     Scaffold(
         bottomBar = {
@@ -99,7 +116,7 @@ fun HomeDashboardScreen(
                 Column {
                     Text(text = "Good evening,", color = TextGray, fontSize = 14.sp)
                     Text(
-                        text = "Alex Johnson 👋",
+                        text = "$userName 👋",
                         color = TextWhite,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold
@@ -125,7 +142,7 @@ fun HomeDashboardScreen(
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     IconButton(
-                        onClick = { },
+                        onClick = onProfileClick,
                         modifier = Modifier
                             .clip(CircleShape)
                             .background(DarkPurple)
@@ -156,13 +173,13 @@ fun HomeDashboardScreen(
                             drawArc(
                                 color = Color(0xFF4CAF50),
                                 startAngle = -90f,
-                                sweepAngle = 295f, // Approx 82/100
+                                sweepAngle = (score / 100f) * 360f,
                                 useCenter = false,
                                 style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
                             )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = "82", color = TextWhite, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                            Text(text = score.toString(), color = TextWhite, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                             Text(text = "/ 100", color = TextGray, fontSize = 12.sp)
                         }
                     }
@@ -171,7 +188,17 @@ fun HomeDashboardScreen(
 
                     Column {
                         Text(text = "TODAY'S SLEEP SCORE", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Text(text = "Excellent", color = TextWhite, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = when {
+                                score >= 85 -> "Excellent"
+                                score >= 70 -> "Good"
+                                score >= 55 -> "Fair"
+                                else -> "Needs Work"
+                            },
+                            color = TextWhite,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
                         Box(
                             modifier = Modifier
@@ -211,6 +238,38 @@ fun HomeDashboardScreen(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(text = "Tap to see full analysis →", color = TextGray, fontSize = 12.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // AI Chat Assistant Card
+            Surface(
+                onClick = onChatClick,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                color = DarkPurple
+            ) {
+                Row(
+                    modifier = Modifier.padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(ButtonGradientStart.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = "💬", fontSize = 24.sp)
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "AI SLEEP ASSISTANT", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "Chat with SleepWell AI", color = TextWhite, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "Ask questions about your sleep & habits", color = TextGray, fontSize = 12.sp)
+                    }
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextGray)
                 }
             }
 
@@ -283,11 +342,11 @@ fun HomeDashboardScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                StatItem(icon = Icons.Default.NightsStay, value = "7.5h", label = "Duration")
-                StatItem(icon = Icons.Default.SentimentNeutral, value = "3/10", label = "Stress")
-                StatItem(icon = Icons.Default.Smartphone, value = "1.2h", label = "Screen")
-                StatItem(icon = Icons.Default.Coffee, value = "1 cup", label = "Caffeine")
-                StatItem(icon = Icons.Default.DirectionsRun, value = "8,420", label = "Activity")
+                StatItem(icon = Icons.Default.NightsStay, value = durationText, label = "Duration")
+                StatItem(icon = Icons.Default.SentimentNeutral, value = stressText, label = "Stress")
+                StatItem(icon = Icons.Default.Smartphone, value = screenText, label = "Screen")
+                StatItem(icon = Icons.Default.Coffee, value = caffeineText, label = "Caffeine")
+                StatItem(icon = Icons.Default.DirectionsRun, value = activityText, label = "Activity")
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -299,7 +358,7 @@ fun HomeDashboardScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(text = "7-Day Trend", color = TextWhite, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                TextButton(onClick = { }) {
+                TextButton(onClick = onAnalyticsClick) {
                     Text(text = "View all →", color = ButtonGradientStart, fontSize = 14.sp)
                 }
             }
@@ -310,14 +369,14 @@ fun HomeDashboardScreen(
                 shape = RoundedCornerShape(24.dp),
                 color = DarkPurple
             ) {
+                val points = uiState.trendPoints
                 Canvas(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 20.dp)) {
                     val path = Path()
-                    val points = listOf(0.6f, 0.4f, 0.7f, 0.5f, 0.8f, 0.6f, 0.9f)
                     val width = size.width
                     val height = size.height
                     
                     points.forEachIndexed { index, yPos ->
-                        val x = index * (width / (points.size - 1))
+                        val x = index * (width / (points.size - 1).coerceAtLeast(1))
                         val y = height - (yPos * height)
                         if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
                     }
@@ -354,7 +413,7 @@ fun HomeDashboardScreen(
                 ) {
                     Icon(Icons.Default.NightsStay, contentDescription = null, tint = Color(0xFFFFA000))
                     Spacer(modifier = Modifier.width(16.dp))
-                    Text(text = "Sleep 30 minutes earlier", color = TextWhite, fontSize = 14.sp)
+                    Text(text = "Sleep 30 minutes earlier tonight", color = TextWhite, fontSize = 14.sp)
                 }
             }
             
@@ -375,8 +434,8 @@ fun StatItem(icon: ImageVector, value: String, label: String) {
     ) {
         Icon(icon, contentDescription = null, tint = ButtonGradientEnd, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = value, color = TextWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        Text(text = label, color = TextGray, fontSize = 10.sp)
+        Text(text = value, color = TextWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Text(text = label, color = TextGray, fontSize = 10.sp, maxLines = 1)
     }
 }
 

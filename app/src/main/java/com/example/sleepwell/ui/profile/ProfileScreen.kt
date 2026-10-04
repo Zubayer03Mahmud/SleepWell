@@ -1,5 +1,8 @@
 package com.example.sleepwell.ui.profile
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,11 +20,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.example.sleepwell.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun ProfileScreen(
@@ -30,11 +39,27 @@ fun ProfileScreen(
     onAnalyticsClick: () -> Unit,
     onNotificationsClick: () -> Unit,
     onLogoutClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    profileViewModel: ProfileViewModel = viewModel()
 ) {
+    val uiState by profileViewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
     var isDarkMode by remember { mutableStateOf(true) }
     var showPrivacyPolicy by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+
+    // Image Picker Launcher
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { profileViewModel.uploadPhoto(it) }
+    }
+
+    val profile = uiState.profile
+
+    LaunchedEffect(Unit) {
+        profileViewModel.loadProfile()
+    }
 
     Scaffold(
         bottomBar = {
@@ -83,37 +108,77 @@ fun ProfileScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Error / Success Message
+            uiState.errorMessage?.let { error ->
+                Text(text = error, color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+            }
+            uiState.successMessage?.let { success ->
+                Text(text = success, color = Color.Green, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+            }
+
             // Avatar Section
             Box(
                 modifier = Modifier
                     .size(100.dp)
                     .clip(CircleShape)
-                    .background(DarkPurple),
+                    .background(DarkPurple)
+                    .clickable { imagePickerLauncher.launch("image/*") },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = null,
-                    modifier = Modifier.size(60.dp),
-                    tint = ButtonGradientEnd.copy(alpha = 0.6f)
-                )
+                if (!profile?.profilePhotoUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = profile?.profilePhotoUrl,
+                        contentDescription = "Profile Photo",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                        modifier = Modifier.size(60.dp),
+                        tint = ButtonGradientEnd.copy(alpha = 0.6f)
+                    )
+                }
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Tap photo to change",
+                color = TextGray,
+                fontSize = 11.sp
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
             
             Text(
-                text = "Alex Johnson",
+                text = if (!profile?.fullName.isNullOrBlank()) profile!!.fullName else "SleepWell User",
                 color = TextWhite,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "alex@sleepwell.ai",
+                text = profile?.email ?: "",
                 color = TextGray,
                 fontSize = 14.sp
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Edit Profile Button
+            OutlinedButton(
+                onClick = { showEditDialog = true },
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = ButtonGradientStart)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Edit Profile", fontSize = 14.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Quick Stats Row
             Row(
@@ -129,9 +194,16 @@ fun ProfileScreen(
 
             // Profile Info Card
             ProfileSectionCard(title = "Profile Info") {
-                ProfileInfoRow("Age", "28 years")
-                ProfileInfoRow("Gender", "Male")
-                ProfileInfoRow("Member Since", "Jan 2025")
+                val memberSince = if (profile != null && profile.createdAt > 0) {
+                    SimpleDateFormat("MMM yyyy", Locale.getDefault()).format(Date(profile.createdAt))
+                } else "Jan 2025"
+
+                ProfileInfoRow("Age", if ((profile?.age ?: 0) > 0) "${profile?.age} years" else "Not set")
+                ProfileInfoRow("Gender", if (!profile?.gender.isNullOrBlank()) profile!!.gender else "Not set")
+                if (!profile?.phoneNumber.isNullOrBlank()) {
+                    ProfileInfoRow("Phone", profile!!.phoneNumber)
+                }
+                ProfileInfoRow("Member Since", memberSince)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -144,21 +216,21 @@ fun ProfileScreen(
                 ) {
                     SleepGoalItem(
                         icon = Icons.Default.NightsStay,
-                        value = "8 hours",
+                        value = "${profile?.targetSleepDuration ?: 8.0} hours",
                         label = "Sleep Duration",
                         modifier = Modifier.weight(1f),
                         color = Color(0xFFFFA000)
                     )
                     SleepGoalItem(
                         icon = Icons.Default.Alarm,
-                        value = "10:30 PM",
+                        value = profile?.targetBedtime ?: "10:30 PM",
                         label = "Bedtime",
                         modifier = Modifier.weight(1f),
                         color = Color(0xFFEF5350)
                     )
                     SleepGoalItem(
                         icon = Icons.Default.Star,
-                        value = "> 80",
+                        value = "> ${profile?.targetSleepScore ?: 80}",
                         label = "Sleep Score",
                         modifier = Modifier.weight(1f),
                         color = Color(0xFF4FC3F7)
@@ -203,7 +275,9 @@ fun ProfileScreen(
 
             // Sign Out Button
             OutlinedButton(
-                onClick = onLogoutClick,
+                onClick = {
+                    profileViewModel.logout(onLogoutClick)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -228,7 +302,104 @@ fun ProfileScreen(
                 onDismiss = { showPrivacyPolicy = false }
             )
         }
+
+        if (showEditDialog && profile != null) {
+            EditProfileDialog(
+                currentProfile = profile,
+                onDismiss = { showEditDialog = false },
+                onSave = { name, age, gender, phone, bio ->
+                    profileViewModel.updateProfile(name, age, gender, phone, bio) {
+                        showEditDialog = false
+                    }
+                }
+            )
+        }
     }
+}
+
+@Composable
+fun EditProfileDialog(
+    currentProfile: com.example.sleepwell.data.model.UserProfile,
+    onDismiss: () -> Unit,
+    onSave: (fullName: String, age: String, gender: String, phone: String, bio: String) -> Unit
+) {
+    var fullName by remember { mutableStateOf(currentProfile.fullName) }
+    var age by remember { mutableStateOf(if (currentProfile.age > 0) currentProfile.age.toString() else "") }
+    var gender by remember { mutableStateOf(currentProfile.gender) }
+    var phone by remember { mutableStateOf(currentProfile.phoneNumber) }
+    var bio by remember { mutableStateOf(currentProfile.bio) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Profile", color = TextWhite, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                OutlinedTextField(
+                    value = fullName,
+                    onValueChange = { fullName = it },
+                    label = { Text("Full Name", color = TextGray) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = DarkPurple,
+                        unfocusedContainerColor = DarkPurple,
+                        focusedTextColor = TextWhite,
+                        unfocusedTextColor = TextWhite
+                    )
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = age,
+                    onValueChange = { age = it },
+                    label = { Text("Age", color = TextGray) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = DarkPurple,
+                        unfocusedContainerColor = DarkPurple,
+                        focusedTextColor = TextWhite,
+                        unfocusedTextColor = TextWhite
+                    )
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = gender,
+                    onValueChange = { gender = it },
+                    label = { Text("Gender", color = TextGray) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = DarkPurple,
+                        unfocusedContainerColor = DarkPurple,
+                        focusedTextColor = TextWhite,
+                        unfocusedTextColor = TextWhite
+                    )
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = { Text("Phone Number", color = TextGray) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = DarkPurple,
+                        unfocusedContainerColor = DarkPurple,
+                        focusedTextColor = TextWhite,
+                        unfocusedTextColor = TextWhite
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(fullName, age, gender, phone, bio) }) {
+                Text("Save", color = ButtonGradientStart, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = TextGray)
+            }
+        },
+        containerColor = DarkPurple,
+        shape = RoundedCornerShape(24.dp)
+    )
 }
 
 @Composable

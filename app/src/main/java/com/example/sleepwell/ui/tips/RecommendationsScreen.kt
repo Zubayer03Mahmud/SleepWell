@@ -28,7 +28,8 @@ fun RecommendationsScreen(
     onHomeClick: () -> Unit,
     onLogClick: () -> Unit,
     onAnalyticsClick: () -> Unit,
-    onProfileClick: () -> Unit
+    onProfileClick: () -> Unit,
+    onChatClick: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
 
@@ -91,15 +92,16 @@ fun RecommendationsScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Personalized by AI for Alex",
+                text = "Personalized by AI",
                 color = TextGray,
                 fontSize = 14.sp
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // AI Generated Banner
+            // AI Generated Banner with Chat Action
             Surface(
+                onClick = onChatClick,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
                 color = DarkPurple
@@ -115,27 +117,24 @@ fun RecommendationsScreen(
                             .background(ButtonGradientStart.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.SmartToy,
-                            contentDescription = null,
-                            tint = ButtonGradientStart,
-                            modifier = Modifier.size(24.dp)
-                        )
+                        Text(text = "💬", fontSize = 24.sp)
                     }
                     Spacer(modifier = Modifier.width(16.dp))
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "AI Generated",
+                            text = "Chat with AI Assistant",
                             color = TextWhite,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Based on your last 7 days of data",
-                            color = TextGray,
-                            fontSize = 12.sp
+                            text = "Tap to ask custom sleep questions 💬",
+                            color = ButtonGradientStart,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextGray)
                 }
             }
 
