@@ -1,5 +1,8 @@
 package com.example.sleepwell.ui.auth
 
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -16,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -26,6 +30,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sleepwell.ui.onboarding.StarBackground
 import com.example.sleepwell.ui.theme.*
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 
 @Composable
 fun LoginScreen(
@@ -34,6 +41,7 @@ fun LoginScreen(
     onForgotPasswordClick: () -> Unit = {},
     authViewModel: AuthViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -42,6 +50,42 @@ fun LoginScreen(
 
     val uiState by authViewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
+
+    // Google Sign-In Launcher
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.getResult(ApiException::class.java)
+                val idToken = account?.idToken
+                if (!idToken.isNullOrBlank()) {
+                    authViewModel.loginWithGoogleToken(idToken, onSuccess = onLoginClick)
+                } else {
+                    authViewModel.setCustomErrorMessage("Google Sign-In: No ID Token received. Ensure SHA-1 fingerprint is added in Firebase Console.")
+                }
+            } catch (e: ApiException) {
+                val errorMsg = when (e.statusCode) {
+                    10 -> "Google Sign-In Error (10): SHA-1 fingerprint is missing in Firebase Console. Add your debug SHA-1 to project settings."
+                    12500 -> "Google Sign-In Error (12500): Enable Google Sign-In in Firebase Console > Authentication."
+                    else -> "Google Sign-In Error: ${e.localizedMessage ?: "Status Code ${e.statusCode}"}"
+                }
+                authViewModel.setCustomErrorMessage(errorMsg)
+            }
+        } else {
+            authViewModel.setCustomErrorMessage("Google Sign-In cancelled or failed.")
+        }
+    }
+
+    val defaultWebClientId = remember(context) {
+        val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+        if (resId != 0) {
+            context.getString(resId)
+        } else {
+            "289832563522-3ahue0a2g3dod3j0flitpc63ap3g8apd.apps.googleusercontent.com"
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -241,7 +285,21 @@ fun LoginScreen(
 
             // Google Button
             OutlinedButton(
-                onClick = { /* Google Sign In */ },
+                onClick = {
+                    if (defaultWebClientId.isNotBlank()) {
+                        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                            .requestIdToken(defaultWebClientId)
+                            .requestEmail()
+                            .build()
+                        val googleSignInClient = GoogleSignIn.getClient(context, gso)
+                        googleSignInClient.signOut().addOnCompleteListener {
+                            googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                        }
+                    } else {
+                        // Fallback if client ID is missing in dummy config
+                        onLoginClick()
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -250,19 +308,28 @@ fun LoginScreen(
                 border = BorderStroke(1.dp, TextGray.copy(alpha = 0.3f))
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "G", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    Text(text = "G", color = Color(0xFF4285F4), fontWeight = FontWeight.Bold, fontSize = 22.sp)
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(text = "Continue with Google", color = TextWhite)
+                    Text(text = "Continue with Google", color = TextWhite, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                 }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
             // Register Link
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "Don't have an account?", color = TextGray)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "Don't have an account?", color = TextGray, fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(4.dp))
                 TextButton(onClick = onRegisterClick) {
-                    Text(text = "Register", color = ButtonGradientEnd, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Register",
+                        color = ButtonGradientEnd,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
                 }
             }
         }

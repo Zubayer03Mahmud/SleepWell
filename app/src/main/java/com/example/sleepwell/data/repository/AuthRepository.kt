@@ -2,6 +2,7 @@ package com.example.sleepwell.data.repository
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.tasks.await
 
 class AuthRepository(
@@ -41,6 +42,21 @@ class AuthRepository(
                 Result.success(user)
             } else {
                 Result.failure(Exception("Login failed: User is null"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun signInWithGoogle(idToken: String): Result<FirebaseUser> {
+        return try {
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+            val authResult = firebaseAuth.signInWithCredential(credential).await()
+            val user = authResult.user
+            if (user != null) {
+                Result.success(user)
+            } else {
+                Result.failure(Exception("Google Sign-In failed: User is null"))
             }
         } catch (e: Exception) {
             Result.failure(e)

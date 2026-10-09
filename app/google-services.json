@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "289832563522",
+    "firebase_url": "https://sleepwell-e681a-default-rtdb.firebaseio.com",
     "project_id": "sleepwell-e681a",
     "storage_bucket": "sleepwell-e681a.firebasestorage.app"
   },
@@ -12,7 +13,20 @@
           "package_name": "com.example.sleepwell"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "289832563522-6ijbnbajam70in0uus71lvmrcgug9cg2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.sleepwell",
+            "certificate_hash": "cb373f053a147c8b95ea3d05a69383c0db84e329"
+          }
+        },
+        {
+          "client_id": "289832563522-3ahue0a2g3dod3j0flitpc63ap3g8apd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAFjFgrtmIaXqwnoEpcj5p04pfiZOXJdSQ"
@@ -20,7 +34,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "289832563522-3ahue0a2g3dod3j0flitpc63ap3g8apd.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

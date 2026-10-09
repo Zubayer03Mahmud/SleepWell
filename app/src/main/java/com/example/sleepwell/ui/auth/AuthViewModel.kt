@@ -55,6 +55,44 @@ class AuthViewModel(
         }
     }
 
+    fun loginWithGoogleToken(idToken: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            val result = authRepository.signInWithGoogle(idToken)
+            result.fold(
+                onSuccess = { user ->
+                    val existingProfileResult = userRepository.getUserProfile(user.uid)
+                    val existingProfile = existingProfileResult.getOrNull()
+
+                    if (existingProfile == null) {
+                        val userProfile = UserProfile(
+                            userId = user.uid,
+                            fullName = user.displayName ?: "Google User",
+                            email = user.email ?: "",
+                            profilePhotoUrl = user.photoUrl?.toString() ?: "",
+                            createdAt = System.currentTimeMillis(),
+                            updatedAt = System.currentTimeMillis()
+                        )
+                        userRepository.saveUserProfile(userProfile)
+                    }
+
+                    _uiState.value = AuthUiState(
+                        isLoading = false,
+                        isAuthenticated = true,
+                        successMessage = "Signed in with Google!"
+                    )
+                    onSuccess()
+                },
+                onFailure = { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = parseAuthError(error)
+                    )
+                }
+            )
+        }
+    }
+
     fun register(
         fullName: String,
         email: String,
@@ -106,7 +144,6 @@ class AuthViewModel(
                             onSuccess()
                         },
                         onFailure = { profileErr ->
-                            // Profile creation failed but Auth succeeded
                             _uiState.value = AuthUiState(
                                 isLoading = false,
                                 isAuthenticated = true,
@@ -163,6 +200,10 @@ class AuthViewModel(
 
     fun clearMessages() {
         _uiState.value = _uiState.value.copy(errorMessage = null, successMessage = null)
+    }
+
+    fun setCustomErrorMessage(message: String) {
+        _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = message)
     }
 
     private fun parseAuthError(error: Throwable): String {
